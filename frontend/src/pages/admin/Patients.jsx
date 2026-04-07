@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import Header from "../../components/layout/Header";
 import api from "../../utils/api";
 import { useAuth } from "../../context/AuthContext";
-import { Plus, Pencil, Trash2, Search, User } from "lucide-react";
+import { Plus, Pencil, Trash2, Search, User, ChevronLeft, ChevronRight } from "lucide-react";
 
 const emptyForm = {
   name: "",
@@ -24,6 +24,11 @@ const Patients = () => {
   const [showForm, setShowForm] = useState(false);
   const [search, setSearch] = useState("");
   const [error, setError] = useState("");
+  
+  // Pagination state
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage] = useState(10);
+  const [totalPages, setTotalPages] = useState(1);
 
   const fetchAll = async () => {
     const [p, d] = await Promise.all([
@@ -37,6 +42,29 @@ const Patients = () => {
   useEffect(() => {
     fetchAll();
   }, []);
+
+  // Filter patients based on search
+  const filtered = patients.filter((p) =>
+    `${p.name} ${p.phone}`.toLowerCase().includes(search.toLowerCase()),
+  );
+
+  // Calculate pagination
+  useEffect(() => {
+    setTotalPages(Math.ceil(filtered.length / itemsPerPage));
+    // Reset to first page when search changes
+    setCurrentPage(1);
+  }, [filtered.length, itemsPerPage, search]);
+
+  // Get current page items
+  const getCurrentPageItems = () => {
+    const startIndex = (currentPage - 1) * itemsPerPage;
+    const endIndex = startIndex + itemsPerPage;
+    return filtered.slice(startIndex, endIndex);
+  };
+
+  const handlePageChange = (page) => {
+    setCurrentPage(page);
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -79,10 +107,6 @@ const Patients = () => {
     fetchAll();
   };
 
-  const filtered = patients.filter((p) =>
-    `${p.name} ${p.phone}`.toLowerCase().includes(search.toLowerCase()),
-  );
-
   const inputStyle = {
     width: "100%",
     padding: "10px 14px",
@@ -100,6 +124,152 @@ const Patients = () => {
     Male: { bg: "#dbeafe", text: "#1e40af" },
     Female: { bg: "#fce7f3", text: "#9d174d" },
     Other: { bg: "#f3f4f6", text: "#374151" },
+  };
+
+  // Pagination component
+  const Pagination = () => {
+    const pages = [];
+    const maxVisiblePages = 5;
+    
+    let startPage = Math.max(1, currentPage - Math.floor(maxVisiblePages / 2));
+    let endPage = Math.min(totalPages, startPage + maxVisiblePages - 1);
+    
+    if (endPage - startPage + 1 < maxVisiblePages) {
+      startPage = Math.max(1, endPage - maxVisiblePages + 1);
+    }
+
+    for (let i = startPage; i <= endPage; i++) {
+      pages.push(i);
+    }
+
+    return (
+      <div
+        style={{
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center",
+          padding: "16px 20px",
+          borderTop: "1px solid #f1f5f9",
+          background: "#fff",
+        }}
+      >
+        <div style={{ fontSize: "13px", color: "#64748b" }}>
+          Showing {filtered.length > 0 ? (currentPage - 1) * itemsPerPage + 1 : 0} to{" "}
+          {Math.min(currentPage * itemsPerPage, filtered.length)} of {filtered.length} patients
+        </div>
+        
+        <div style={{ display: "flex", gap: "6px", alignItems: "center" }}>
+          <button
+            onClick={() => handlePageChange(currentPage - 1)}
+            disabled={currentPage === 1}
+            style={{
+              width: "32px",
+              height: "32px",
+              borderRadius: "7px",
+              border: "1px solid #e2e8f0",
+              background: "#fff",
+              cursor: currentPage === 1 ? "not-allowed" : "pointer",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              opacity: currentPage === 1 ? 0.5 : 1,
+            }}
+          >
+            <ChevronLeft size={14} color="#64748b" />
+          </button>
+          
+          {startPage > 1 && (
+            <>
+              <button
+                onClick={() => handlePageChange(1)}
+                style={{
+                  minWidth: "32px",
+                  height: "32px",
+                  padding: "0 8px",
+                  borderRadius: "7px",
+                  border: "1px solid #e2e8f0",
+                  background: "#fff",
+                  cursor: "pointer",
+                  fontSize: "13px",
+                  color: "#64748b",
+                  fontWeight: "500",
+                }}
+              >
+                1
+              </button>
+              {startPage > 2 && (
+                <span style={{ color: "#cbd5e1", fontSize: "13px" }}>...</span>
+              )}
+            </>
+          )}
+          
+          {pages.map((page) => (
+            <button
+              key={page}
+              onClick={() => handlePageChange(page)}
+              style={{
+                minWidth: "32px",
+                height: "32px",
+                padding: "0 8px",
+                borderRadius: "7px",
+                border: currentPage === page ? "none" : "1px solid #e2e8f0",
+                background: currentPage === page ? "#0a1628" : "#fff",
+                cursor: "pointer",
+                fontSize: "13px",
+                color: currentPage === page ? "#fff" : "#64748b",
+                fontWeight: currentPage === page ? "600" : "500",
+              }}
+            >
+              {page}
+            </button>
+          ))}
+          
+          {endPage < totalPages && (
+            <>
+              {endPage < totalPages - 1 && (
+                <span style={{ color: "#cbd5e1", fontSize: "13px" }}>...</span>
+              )}
+              <button
+                onClick={() => handlePageChange(totalPages)}
+                style={{
+                  minWidth: "32px",
+                  height: "32px",
+                  padding: "0 8px",
+                  borderRadius: "7px",
+                  border: "1px solid #e2e8f0",
+                  background: "#fff",
+                  cursor: "pointer",
+                  fontSize: "13px",
+                  color: "#64748b",
+                  fontWeight: "500",
+                }}
+              >
+                {totalPages}
+              </button>
+            </>
+          )}
+          
+          <button
+            onClick={() => handlePageChange(currentPage + 1)}
+            disabled={currentPage === totalPages}
+            style={{
+              width: "32px",
+              height: "32px",
+              borderRadius: "7px",
+              border: "1px solid #e2e8f0",
+              background: "#fff",
+              cursor: currentPage === totalPages ? "not-allowed" : "pointer",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              opacity: currentPage === totalPages ? 0.5 : 1,
+            }}
+          >
+            <ChevronRight size={14} color="#64748b" />
+          </button>
+        </div>
+      </div>
+    );
   };
 
   return (
@@ -550,7 +720,7 @@ const Patients = () => {
               </tr>
             </thead>
             <tbody>
-              {filtered.map((p, i) => (
+              {getCurrentPageItems().map((p, i) => (
                 <tr
                   key={p.patient_id}
                   style={{
@@ -696,6 +866,9 @@ const Patients = () => {
               )}
             </tbody>
           </table>
+          
+          {/* Pagination */}
+          {filtered.length > 0 && <Pagination />}
         </div>
       </main>
 

@@ -19,6 +19,8 @@ app.use("/api/schedules", require("./routes/schedules"));
 app.use("/api/signage", require("./routes/signage"));
 app.use("/api/users", require("./routes/users"));
 
+app.use("/api/seed", require("./routes/seed"));
+
 app.get("/health", (req, res) => res.json({ status: "ok" }));
 
 const PORT = process.env.PORT || 5000;

@@ -11,6 +11,7 @@ import {
   UserCog,
   Clock,
   ChevronRight,
+  FileText,
 } from "lucide-react";
 
 const navGroups = [
@@ -67,6 +68,17 @@ const navGroups = [
         to: "/bookings",
         label: "Bookings",
         icon: CalendarDays,
+        roles: ["super_admin", "supervisor", "receptionist"],
+      },
+    ],
+  },
+  {
+    label: "Reports",
+    items: [
+      {
+        to: "/reports/appointments",
+        label: "Appointments",
+        icon: FileText,
         roles: ["super_admin", "supervisor", "receptionist"],
       },
     ],

@@ -265,7 +265,7 @@ const Display = () => {
               >
                 {doc.photo ? (
                   <img
-                    src={`http://localhost:5000${doc.photo}`}
+                    src={`http://localhost:5001${doc.photo}`}
                     alt={doc.doctor_name}
                     style={{
                       width: "100%",

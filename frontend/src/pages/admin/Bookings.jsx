@@ -1,8 +1,8 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import Header from "../../components/layout/Header";
 import api from "../../utils/api";
 import { useAuth } from "../../context/AuthContext";
-import { Plus, Trash2, Search, Calendar, Clock } from "lucide-react";
+import { Plus, Trash2, Search, Calendar, Clock, ChevronLeft, ChevronRight, ChevronDown, X } from "lucide-react";
 
 const emptyForm = {
   patient_id: "",
@@ -19,6 +19,213 @@ const statusConfig = {
   canceled: { bg: "#fee2e2", text: "#991b1b", dot: "#ef4444" },
 };
 
+// Custom Searchable Select Component
+const SearchableSelect = ({ 
+  options, 
+  value, 
+  onChange, 
+  placeholder, 
+  required,
+  displayKey = "name",
+  valueKey = "id",
+  secondaryKey = null,
+  disabled = false
+}) => {
+  const [isOpen, setIsOpen] = useState(false);
+  const [searchTerm, setSearchTerm] = useState("");
+  const dropdownRef = useRef(null);
+  const inputRef = useRef(null);
+  const selectedOption = options.find(opt => opt[valueKey] == value);
+
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
+        setIsOpen(false);
+        setSearchTerm("");
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  const filteredOptions = options.filter(opt => {
+    const searchLower = searchTerm.toLowerCase();
+    const primaryMatch = opt[displayKey]?.toLowerCase().includes(searchLower);
+    const secondaryMatch = secondaryKey ? opt[secondaryKey]?.toLowerCase().includes(searchLower) : false;
+    return primaryMatch || secondaryMatch;
+  });
+
+  const handleSelect = (option) => {
+    onChange(option[valueKey]);
+    setIsOpen(false);
+    setSearchTerm("");
+  };
+
+  const handleClear = (e) => {
+    e.stopPropagation();
+    onChange("");
+    setSearchTerm("");
+  };
+
+  return (
+    <div ref={dropdownRef} style={{ position: "relative", width: "100%" }}>
+      <div
+        style={{
+          width: "100%",
+          padding: "10px 14px",
+          border: "1px solid #e2e8f0",
+          borderRadius: "8px",
+          fontSize: "13px",
+          color: selectedOption ? "#0f172a" : "#94a3b8",
+          outline: "none",
+          boxSizing: "border-box",
+          fontFamily: "'Plus Jakarta Sans', sans-serif",
+          background: disabled ? "#f8fafc" : "#fff",
+          cursor: disabled ? "not-allowed" : "pointer",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          minHeight: "41px"
+        }}
+        onClick={() => !disabled && setIsOpen(!isOpen)}
+      >
+        <span style={{ flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+          {selectedOption 
+            ? secondaryKey 
+              ? `${selectedOption[displayKey]} — ${selectedOption[secondaryKey]}`
+              : selectedOption[displayKey]
+            : placeholder}
+        </span>
+        <div style={{ display: "flex", alignItems: "center", gap: "4px" }}>
+          {value && !disabled && (
+            <X
+              size={14}
+              color="#94a3b8"
+              style={{ cursor: "pointer" }}
+              onClick={handleClear}
+              onMouseEnter={(e) => e.currentTarget.style.color = "#64748b"}
+              onMouseLeave={(e) => e.currentTarget.style.color = "#94a3b8"}
+            />
+          )}
+          <ChevronDown
+            size={14}
+            color="#94a3b8"
+            style={{
+              transform: isOpen ? "rotate(180deg)" : "rotate(0deg)",
+              transition: "transform 0.2s"
+            }}
+          />
+        </div>
+      </div>
+
+      {isOpen && !disabled && (
+        <div
+          style={{
+            position: "absolute",
+            top: "100%",
+            left: 0,
+            right: 0,
+            marginTop: "4px",
+            background: "#fff",
+            border: "1px solid #e2e8f0",
+            borderRadius: "8px",
+            boxShadow: "0 4px 6px -1px rgba(0, 0, 0, 0.1)",
+            zIndex: 1000,
+            maxHeight: "300px",
+            overflow: "hidden",
+            display: "flex",
+            flexDirection: "column"
+          }}
+        >
+          <div style={{ padding: "8px", borderBottom: "1px solid #f1f5f9" }}>
+            <div style={{ position: "relative" }}>
+              <Search
+                size={14}
+                style={{
+                  position: "absolute",
+                  left: "10px",
+                  top: "50%",
+                  transform: "translateY(-50%)",
+                  color: "#94a3b8"
+                }}
+              />
+              <input
+                ref={inputRef}
+                type="text"
+                placeholder="Search..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                style={{
+                  width: "100%",
+                  padding: "8px 8px 8px 32px",
+                  border: "1px solid #e2e8f0",
+                  borderRadius: "6px",
+                  fontSize: "12px",
+                  outline: "none",
+                  boxSizing: "border-box"
+                }}
+                onClick={(e) => e.stopPropagation()}
+                autoFocus
+              />
+            </div>
+          </div>
+          <div style={{ overflowY: "auto", maxHeight: "250px" }}>
+            {filteredOptions.length === 0 ? (
+              <div style={{ padding: "20px", textAlign: "center", color: "#94a3b8", fontSize: "12px" }}>
+                No options found
+              </div>
+            ) : (
+              filteredOptions.map((option) => (
+                <div
+                  key={option[valueKey]}
+                  style={{
+                    padding: "10px 14px",
+                    cursor: "pointer",
+                    fontSize: "13px",
+                    color: value == option[valueKey] ? "#0a1628" : "#0f172a",
+                    background: value == option[valueKey] ? "#f8fafc" : "transparent",
+                    fontWeight: value == option[valueKey] ? "600" : "400",
+                    borderBottom: "1px solid #f8fafc",
+                    transition: "background 0.15s"
+                  }}
+                  onClick={() => handleSelect(option)}
+                  onMouseEnter={(e) => {
+                    if (value != option[valueKey]) {
+                      e.currentTarget.style.background = "#f8fafc";
+                    }
+                  }}
+                  onMouseLeave={(e) => {
+                    if (value != option[valueKey]) {
+                      e.currentTarget.style.background = "transparent";
+                    }
+                  }}
+                >
+                  {option[displayKey]}
+                  {secondaryKey && option[secondaryKey] && (
+                    <span style={{ color: "#94a3b8", fontSize: "11px", marginLeft: "8px" }}>
+                      — {option[secondaryKey]}
+                    </span>
+                  )}
+                </div>
+              ))
+            )}
+          </div>
+        </div>
+      )}
+      
+      {required && (
+        <input
+          type="text"
+          value={value}
+          onChange={() => {}}
+          required={required}
+          style={{ position: "absolute", opacity: 0, pointerEvents: "none", width: 0, height: 0 }}
+        />
+      )}
+    </div>
+  );
+};
+
 const Bookings = () => {
   const { user } = useAuth();
   const [bookings, setBookings] = useState([]);
@@ -31,6 +238,11 @@ const Bookings = () => {
   const [search, setSearch] = useState("");
   const [filterStatus, setFilterStatus] = useState("all");
   const [error, setError] = useState("");
+  
+  // Pagination state
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage] = useState(10);
+  const [totalPages, setTotalPages] = useState(1);
 
   const fetchAll = async () => {
     const [b, p, d, dept] = await Promise.all([
@@ -102,6 +314,23 @@ const Bookings = () => {
     return matchSearch && matchStatus;
   });
 
+  // Calculate pagination
+  useEffect(() => {
+    setTotalPages(Math.ceil(filtered.length / itemsPerPage));
+    setCurrentPage(1);
+  }, [filtered.length, itemsPerPage, filterStatus, search]);
+
+  // Get current page items
+  const getCurrentPageItems = () => {
+    const startIndex = (currentPage - 1) * itemsPerPage;
+    const endIndex = startIndex + itemsPerPage;
+    return filtered.slice(startIndex, endIndex);
+  };
+
+  const handlePageChange = (page) => {
+    setCurrentPage(page);
+  };
+
   const inputStyle = {
     width: "100%",
     padding: "10px 14px",
@@ -120,6 +349,152 @@ const Bookings = () => {
     pending: bookings.filter((b) => b.status === "pending").length,
     confirmed: bookings.filter((b) => b.status === "confirmed").length,
     canceled: bookings.filter((b) => b.status === "canceled").length,
+  };
+
+  // Pagination component
+  const Pagination = () => {
+    const pages = [];
+    const maxVisiblePages = 5;
+    
+    let startPage = Math.max(1, currentPage - Math.floor(maxVisiblePages / 2));
+    let endPage = Math.min(totalPages, startPage + maxVisiblePages - 1);
+    
+    if (endPage - startPage + 1 < maxVisiblePages) {
+      startPage = Math.max(1, endPage - maxVisiblePages + 1);
+    }
+
+    for (let i = startPage; i <= endPage; i++) {
+      pages.push(i);
+    }
+
+    return (
+      <div
+        style={{
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center",
+          padding: "16px 20px",
+          borderTop: "1px solid #f1f5f9",
+          background: "#fff",
+        }}
+      >
+        <div style={{ fontSize: "13px", color: "#64748b" }}>
+          Showing {filtered.length > 0 ? (currentPage - 1) * itemsPerPage + 1 : 0} to{" "}
+          {Math.min(currentPage * itemsPerPage, filtered.length)} of {filtered.length} bookings
+        </div>
+        
+        <div style={{ display: "flex", gap: "6px", alignItems: "center" }}>
+          <button
+            onClick={() => handlePageChange(currentPage - 1)}
+            disabled={currentPage === 1}
+            style={{
+              width: "32px",
+              height: "32px",
+              borderRadius: "7px",
+              border: "1px solid #e2e8f0",
+              background: "#fff",
+              cursor: currentPage === 1 ? "not-allowed" : "pointer",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              opacity: currentPage === 1 ? 0.5 : 1,
+            }}
+          >
+            <ChevronLeft size={14} color="#64748b" />
+          </button>
+          
+          {startPage > 1 && (
+            <>
+              <button
+                onClick={() => handlePageChange(1)}
+                style={{
+                  minWidth: "32px",
+                  height: "32px",
+                  padding: "0 8px",
+                  borderRadius: "7px",
+                  border: "1px solid #e2e8f0",
+                  background: "#fff",
+                  cursor: "pointer",
+                  fontSize: "13px",
+                  color: "#64748b",
+                  fontWeight: "500",
+                }}
+              >
+                1
+              </button>
+              {startPage > 2 && (
+                <span style={{ color: "#cbd5e1", fontSize: "13px" }}>...</span>
+              )}
+            </>
+          )}
+          
+          {pages.map((page) => (
+            <button
+              key={page}
+              onClick={() => handlePageChange(page)}
+              style={{
+                minWidth: "32px",
+                height: "32px",
+                padding: "0 8px",
+                borderRadius: "7px",
+                border: currentPage === page ? "none" : "1px solid #e2e8f0",
+                background: currentPage === page ? "#0a1628" : "#fff",
+                cursor: "pointer",
+                fontSize: "13px",
+                color: currentPage === page ? "#fff" : "#64748b",
+                fontWeight: currentPage === page ? "600" : "500",
+              }}
+            >
+              {page}
+            </button>
+          ))}
+          
+          {endPage < totalPages && (
+            <>
+              {endPage < totalPages - 1 && (
+                <span style={{ color: "#cbd5e1", fontSize: "13px" }}>...</span>
+              )}
+              <button
+                onClick={() => handlePageChange(totalPages)}
+                style={{
+                  minWidth: "32px",
+                  height: "32px",
+                  padding: "0 8px",
+                  borderRadius: "7px",
+                  border: "1px solid #e2e8f0",
+                  background: "#fff",
+                  cursor: "pointer",
+                  fontSize: "13px",
+                  color: "#64748b",
+                  fontWeight: "500",
+                }}
+              >
+                {totalPages}
+              </button>
+            </>
+          )}
+          
+          <button
+            onClick={() => handlePageChange(currentPage + 1)}
+            disabled={currentPage === totalPages}
+            style={{
+              width: "32px",
+              height: "32px",
+              borderRadius: "7px",
+              border: "1px solid #e2e8f0",
+              background: "#fff",
+              cursor: currentPage === totalPages ? "not-allowed" : "pointer",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              opacity: currentPage === totalPages ? 0.5 : 1,
+            }}
+          >
+            <ChevronRight size={14} color="#64748b" />
+          </button>
+        </div>
+      </div>
+    );
   };
 
   return (
@@ -293,21 +668,16 @@ const Bookings = () => {
                   >
                     Patient
                   </label>
-                  <select
-                    style={inputStyle}
+                  <SearchableSelect
+                    options={patients}
                     value={form.patient_id}
-                    onChange={(e) =>
-                      setForm({ ...form, patient_id: e.target.value })
-                    }
-                    required
-                  >
-                    <option value="">Select patient</option>
-                    {patients.map((p) => (
-                      <option key={p.patient_id} value={p.patient_id}>
-                        {p.name} — {p.phone}
-                      </option>
-                    ))}
-                  </select>
+                    onChange={(value) => setForm({ ...form, patient_id: value })}
+                    placeholder="Select patient"
+                    required={true}
+                    displayKey="name"
+                    valueKey="patient_id"
+                    secondaryKey="phone"
+                  />
                 </div>
                 <div>
                   <label
@@ -321,21 +691,16 @@ const Bookings = () => {
                   >
                     Doctor
                   </label>
-                  <select
-                    style={inputStyle}
+                  <SearchableSelect
+                    options={doctors}
                     value={form.doctor_id}
-                    onChange={(e) =>
-                      setForm({ ...form, doctor_id: e.target.value, time: "" })
-                    }
-                    required
-                  >
-                    <option value="">Select doctor</option>
-                    {doctors.map((d) => (
-                      <option key={d.doctor_id} value={d.doctor_id}>
-                        {d.name} — {d.specialization}
-                      </option>
-                    ))}
-                  </select>
+                    onChange={(value) => setForm({ ...form, doctor_id: value, time: "" })}
+                    placeholder="Select doctor"
+                    required={true}
+                    displayKey="name"
+                    valueKey="doctor_id"
+                    secondaryKey="specialization"
+                  />
                 </div>
                 <div>
                   <label
@@ -396,21 +761,15 @@ const Bookings = () => {
                     >
                       Department
                     </label>
-                    <select
-                      style={inputStyle}
+                    <SearchableSelect
+                      options={departments}
                       value={form.department_id}
-                      onChange={(e) =>
-                        setForm({ ...form, department_id: e.target.value })
-                      }
-                      required
-                    >
-                      <option value="">Select department</option>
-                      {departments.map((d) => (
-                        <option key={d.department_id} value={d.department_id}>
-                          {d.name}
-                        </option>
-                      ))}
-                    </select>
+                      onChange={(value) => setForm({ ...form, department_id: value })}
+                      placeholder="Select department"
+                      required={true}
+                      displayKey="name"
+                      valueKey="department_id"
+                    />
                   </div>
                 )}
               </div>
@@ -492,7 +851,6 @@ const Bookings = () => {
                   value={form.time}
                   onChange={() => {}}
                   required
-                  className="sr-only"
                   style={{
                     position: "absolute",
                     opacity: 0,
@@ -592,7 +950,7 @@ const Bookings = () => {
               </tr>
             </thead>
             <tbody>
-              {filtered.map((b, i) => (
+              {getCurrentPageItems().map((b, i) => (
                 <tr
                   key={b.booking_id}
                   style={{
@@ -706,6 +1064,9 @@ const Bookings = () => {
               )}
             </tbody>
           </table>
+          
+          {/* Pagination */}
+          {filtered.length > 0 && <Pagination />}
         </div>
       </main>
 

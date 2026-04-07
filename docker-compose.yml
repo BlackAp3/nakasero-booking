@@ -28,12 +28,13 @@ services:
       DB_PASS: nakasero_pass
       JWT_SECRET: nakasero_jwt_s3cur3_k3y_2026!@#$%
       PORT: 5000
+      NODE_ENV: development
+    ports:
+      - "5001:5000"
     volumes:
       - ./backend:/app
       - /app/node_modules
-      - uploads:/app/uploads
-    ports:
-      - "5000:5000"
+    command: npm run dev
 
   frontend:
     build: ./frontend
@@ -41,12 +42,10 @@ services:
     restart: always
     depends_on:
       - backend
-    volumes:
-      - ./frontend:/app
-      - /app/node_modules
     ports:
       - "3000:3000"
+    volumes:
+      - ./frontend/src:/app/src
 
 volumes:
   pgdata:
-  uploads:

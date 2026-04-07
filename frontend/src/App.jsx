@@ -12,6 +12,7 @@ import Schedules from "./pages/admin/Schedules";
 import Users from "./pages/admin/Users";
 import Signage from "./pages/admin/Signage";
 import Display from "./pages/signage/Display";
+import AppointmentsReport from "./pages/admin/AppointmentsReport";
 
 const AdminLayout = ({ children }) => (
   <div className="flex min-h-screen bg-gray-50">
@@ -121,7 +122,16 @@ const App = () => {
               </ProtectedRoute>
             }
           />
-
+<Route
+  path="/reports/appointments"
+  element={
+    <ProtectedRoute roles={["super_admin", "supervisor", "receptionist"]}>
+      <AdminLayout>
+        <AppointmentsReport />
+      </AdminLayout>
+    </ProtectedRoute>
+  }
+/>
           <Route path="/" element={<Navigate to="/dashboard" replace />} />
         </Routes>
       </BrowserRouter>

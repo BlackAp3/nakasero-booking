@@ -162,4 +162,99 @@ router.delete(
   },
 );
 
+// GET /api/bookings/report — filtered report with date range, doctor, status, search
+router.get("/report", authenticate, async (req, res) => {
+  try {
+    const { 
+      start_date, 
+      end_date, 
+      doctor_id, 
+      department_id, 
+      status, 
+      search 
+    } = req.query;
+    
+    const { role, department_id: user_dept_id } = req.user;
+    const isGlobal = role === "super_admin";
+
+    // Build the WHERE clause dynamically
+    const conditions = [];
+    const params = [];
+    let paramIndex = 1;
+
+    // Department isolation (except for super_admin)
+    if (!isGlobal) {
+      conditions.push(`b.department_id = $${paramIndex}`);
+      params.push(user_dept_id);
+      paramIndex++;
+    } else if (department_id && department_id !== 'all') {
+      conditions.push(`b.department_id = $${paramIndex}`);
+      params.push(department_id);
+      paramIndex++;
+    }
+
+    // Date range filter
+    if (start_date) {
+      conditions.push(`b.date >= $${paramIndex}`);
+      params.push(start_date);
+      paramIndex++;
+    }
+    if (end_date) {
+      conditions.push(`b.date <= $${paramIndex}`);
+      params.push(end_date);
+      paramIndex++;
+    }
+
+    // Doctor filter
+    if (doctor_id && doctor_id !== 'all') {
+      conditions.push(`b.doctor_id = $${paramIndex}`);
+      params.push(doctor_id);
+      paramIndex++;
+    }
+
+    // Status filter
+    if (status && status !== 'all') {
+      conditions.push(`b.status = $${paramIndex}`);
+      params.push(status);
+      paramIndex++;
+    }
+
+    // Search filter
+    if (search) {
+      conditions.push(`(
+        p.name ILIKE $${paramIndex} OR 
+        d.name ILIKE $${paramIndex} OR 
+        b.appointment_type ILIKE $${paramIndex}
+      )`);
+      params.push(`%${search}%`);
+      paramIndex++;
+    }
+
+    const whereClause = conditions.length > 0 
+      ? `WHERE ${conditions.join(' AND ')}` 
+      : '';
+
+    const query = `
+      SELECT 
+        b.*, 
+        p.name as patient_name, 
+        d.name as doctor_name, 
+        dept.name as department_name
+      FROM bookings b
+      JOIN patients p ON b.patient_id = p.patient_id
+      JOIN doctors d ON b.doctor_id = d.doctor_id
+      JOIN departments dept ON b.department_id = dept.department_id
+      ${whereClause}
+      ORDER BY b.date ASC, b.time ASC
+    `;
+
+    const result = await pool.query(query, params);
+    res.json(result.rows);
+    
+  } catch (err) {
+    console.error('Report error:', err);
+    res.status(500).json({ message: "Server error generating report" });
+  }
+});
+
 module.exports = router;
