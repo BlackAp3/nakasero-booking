@@ -18,6 +18,7 @@ app.use("/api/bookings", require("./routes/bookings"));
 app.use("/api/schedules", require("./routes/schedules"));
 app.use("/api/signage", require("./routes/signage"));
 app.use("/api/users", require("./routes/users"));
+app.use("/api/specializations", require("./routes/specializations")); // add this line
 
 app.use("/api/seed", require("./routes/seed"));
 
